@@ -1,36 +1,70 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>Scheda Tecnico: {{ tech.name }}</h2>
-<hr>
-
 <div class="row">
-    <div class="col-md-5">
-        <div class="card p-3 shadow-sm">
-            <h5>Carica Materiale su Furgone</h5>
-            <form action="/technician/{{ tech.id }}/assign" method="POST">
-                <select name="item_code" class="form-select mb-2" required>
-                    <option value="">Seleziona materiale da magazzino...</option>
-                    {% for i in available_items %}
-                    <option value="{{ i.code }}">{{ i.description }} (Disp: {{ i.quantity }})</option>
-                    {% endfor %}
-                </select>
-                <input type="number" name="quantity" class="form-control mb-2" placeholder="Quantità" required>
-                <button class="btn btn-warning w-100">Trasferisci a Tecnico</button>
-            </form>
+    <div class="col-md-4">
+        <div class="card shadow mb-4">
+            <div class="card-body text-center">
+                <div class="display-1 text-primary"><i class="fas fa-user-circle"></i></div>
+                <h3 class="mt-2">{{ tech.name }}</h3>
+                <p class="text-muted">Targa Furgone: <strong>{{ tech.van_plate }}</strong></p>
+                <hr>
+                <p><i class="fas fa-phone me-2"></i>{{ tech.phone }}</p>
+            </div>
+        </div>
+
+        <div class="card shadow mb-4">
+            <div class="card-body">
+                <h6><i class="fas fa-file-pdf me-2 text-danger"></i>Nuovo Attestato/Corso</h6>
+                <form method="POST" enctype="multipart/form-data">
+                    <input type="text" name="desc" class="form-control mb-2" placeholder="Titolo Corso (es. Sicurezza)">
+                    <input type="file" name="cert_file" class="form-control mb-2" accept=".pdf,.jpg,.png" required>
+                    <button class="btn btn-sm btn-danger w-100">Carica Documento</button>
+                </form>
+            </div>
         </div>
     </div>
 
-    <div class="col-md-7">
-        <div class="card p-3 shadow-sm">
-            <h5>Magazzino Viaggiante</h5>
-            <table class="table">
-                <thead><tr><th>Codice</th><th>Descrizione</th><th>Q.tà</th></tr></thead>
-                <tbody>
-                    {% for item in tech.items %}
-                    <tr><td>{{ item.code }}</td><td>{{ item.description }}</td><td>{{ item.quantity }}</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    <div class="col-md-8">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-warning text-dark fw-bold">Assegna Materiale / Attrezzatura</div>
+            <div class="card-body">
+                <form action="/assign/{{ tech.id }}" method="POST" class="row g-2">
+                    <div class="col-md-7">
+                        <select name="item_id" class="form-select" required>
+                            <option value="">Seleziona dal Magazzino Generale...</option>
+                            {% for i in available %}
+                                <option value="{{ i.id }}">{{ i.description }} - SN: {{ i.serial if i.serial else 'N/A' }} (Disp: {{ i.quantity }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <input type="number" name="qty" class="form-control" value="1" min="1">
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-dark w-100">Assegna</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">Magazzino Viaggiante (In dotazione)</div>
+            <div class="card-body p-0">
+                <table class="table table-striped mb-0">
+                    <thead>
+                        <tr><th>Modello</th><th>Matricola</th><th>Q.tà</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for item in tech.items %}
+                        <tr>
+                            <td>{{ item.code }}</td>
+                            <td><span class="text-primary">{{ item.serial if item.serial else '-' }}</span></td>
+                            <td>{{ item.quantity }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
