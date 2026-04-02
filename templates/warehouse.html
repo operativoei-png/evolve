@@ -1,0 +1,17 @@
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card p-3">
+            <h5>Importa da Excel</h5>
+            <form action="/import/excel" method="POST" enctype="multipart/form-data">
+                <input type="file" name="file" class="form-control mb-2">
+                <button class="btn btn-sm btn-success">Carica File</button>
+            </form>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card p-3">
+            <h5>Esporta</h5>
+            <a href="/export/excel" class="btn btn-primary">Scarica Inventario Excel</a>
+        </div>
+    </div>
+</div>
