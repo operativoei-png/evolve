@@ -49,19 +49,27 @@ def create_app():
     def index(): return redirect(url_for('dashboard'))
 
     @app.route('/login', methods=['GET', 'POST'])
-    def login():
-        if request.method == 'POST':
-            user = User.query.filter_by(username=request.form['username']).first()
-            if user and check_password_hash(user.password_hash, request.form['password']):
-                login_user(user)
-                return redirect(url_for('dashboard'))
-            flash('Credenziali errate!')
-        return render_template('login.html')
-
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        user = User.query.filter_by(username=username).first()
+        
+        if user and check_password_hash(user.password_hash, password):
+            login_user(user)
+            # Forza il redirect alla dashboard usando un percorso relativo
+            return redirect(url_for('dashboard', _external=False))
+        
+        flash('Credenziali errate!')
+    return render_template('login.html')
+    
     @app.route('/dashboard')
-    @login_required
-    def dashboard():
-        return render_template('dashboard.html', t_count=Technician.query.count(), i_count=Item.query.count())
+@login_required
+def dashboard():
+    # Conta i record per i box della dashboard
+    t_count = Technician.query.count()
+    i_count = Item.query.count()
+    return render_template('dashboard.html', t_count=t_count, i_count=i_count)
 
     @app.route('/technicians', methods=['GET', 'POST'])
     @login_required
