@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Scheda Tecnico: {{ tech.name }}</h2>
+<hr>
+
+<div class="row">
+    <div class="col-md-5">
+        <div class="card p-3 shadow-sm">
+            <h5>Carica Materiale su Furgone</h5>
+            <form action="/technician/{{ tech.id }}/assign" method="POST">
+                <select name="item_code" class="form-select mb-2" required>
+                    <option value="">Seleziona materiale da magazzino...</option>
+                    {% for i in available_items %}
+                    <option value="{{ i.code }}">{{ i.description }} (Disp: {{ i.quantity }})</option>
+                    {% endfor %}
+                </select>
+                <input type="number" name="quantity" class="form-control mb-2" placeholder="Quantità" required>
+                <button class="btn btn-warning w-100">Trasferisci a Tecnico</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-md-7">
+        <div class="card p-3 shadow-sm">
+            <h5>Magazzino Viaggiante</h5>
+            <table class="table">
+                <thead><tr><th>Codice</th><th>Descrizione</th><th>Q.tà</th></tr></thead>
+                <tbody>
+                    {% for item in tech.items %}
+                    <tr><td>{{ item.code }}</td><td>{{ item.description }}</td><td>{{ item.quantity }}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
