@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-4 card p-4 shadow">
+        <h3 class="text-center">Accesso</h3>
+        <form method="POST">
+            <input type="text" name="username" class="form-control mb-3" placeholder="Username" required>
+            <input type="password" name="password" class="form-control mb-3" placeholder="Password" required>
+            <button class="btn btn-primary w-100">Entra</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
