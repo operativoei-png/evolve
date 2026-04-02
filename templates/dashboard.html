@@ -1,18 +1,23 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="row text-center">
-    <div class="col-md-6 mb-4">
-        <div class="card p-4 border-primary">
-            <h1>{{ t_count }}</h1>
-            <p>Tecnici Registrati</p>
-            <a href="/technicians" class="btn btn-outline-primary">Gestisci</a>
+<h2 class="mb-4">Dashboard Aziendale</h2>
+<div class="row g-4 text-center">
+    <div class="col-md-4">
+        <div class="card sidebar-card bg-primary text-white p-4 shadow border-0">
+            <h3>{{ stats.techs }}</h3>
+            <p class="mb-0">Dipendenti Attivi</p>
         </div>
     </div>
-    <div class="col-md-6 mb-4">
-        <div class="card p-4 border-success">
-            <h1>{{ i_count }}</h1>
-            <p>Articoli in Magazzino</p>
-            <button class="btn btn-outline-success">Inventario</button>
+    <div class="col-md-4">
+        <div class="card sidebar-card bg-success text-white p-4 shadow border-0">
+            <h3>{{ stats.wh_items }}</h3>
+            <p class="mb-0">Articoli in Magazzino Centrale</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card sidebar-card bg-dark text-white p-4 shadow border-0">
+            <h3>{{ stats.assigned }}</h3>
+            <p class="mb-0">Articoli Assegnati ai Tecnici</p>
         </div>
     </div>
 </div>
