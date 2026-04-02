@@ -49,7 +49,7 @@ def create_app():
     def index(): return redirect(url_for('dashboard'))
 
     @app.route('/login', methods=['GET', 'POST'])
-def login():
+        def login():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
