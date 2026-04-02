@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row text-center">
+    <div class="col-md-6 mb-4">
+        <div class="card p-4 border-primary">
+            <h1>{{ t_count }}</h1>
+            <p>Tecnici Registrati</p>
+            <a href="/technicians" class="btn btn-outline-primary">Gestisci</a>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card p-4 border-success">
+            <h1>{{ i_count }}</h1>
+            <p>Articoli in Magazzino</p>
+            <button class="btn btn-outline-success">Inventario</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
