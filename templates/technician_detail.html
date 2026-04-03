@@ -2,35 +2,49 @@
 {% block content %}
 <div class="row">
     <div class="col-md-4">
-        <div class="card shadow-sm p-4 text-center">
-            <h3>{{ tech.name }}</h3>
+        <div class="card shadow border-0 p-4 text-center">
+            <i class="fas fa-user-hard-hat fa-4x text-secondary mb-3"></i>
+            <h3 class="fw-bold">{{ tech.name }}</h3>
             <p class="badge bg-primary fs-6">{{ tech.van_plate }}</p>
+            <p class="text-muted small">Badge ID: {{ tech.badge_id }}</p>
             <hr>
-            <a href="/technicians" class="btn btn-sm btn-secondary">Torna alla lista</a>
+            <a href="/technicians" class="btn btn-outline-secondary w-100 btn-sm">Torna alla lista</a>
         </div>
     </div>
-
     <div class="col-md-8">
-        <div class="card shadow-sm mb-4 border-warning">
+        <div class="card shadow-sm border-warning mb-4" style="border-left: 5px solid;">
             <div class="card-body">
-                <h5 class="fw-bold"><i class="fas fa-barcode"></i> ASSEGNA CON PISTOLA BARCODE</h5>
-                <form action="/assign/{{ tech.id }}" method="POST" class="d-flex gap-2">
-                    <input type="text" name="barcode_serial" class="form-control" placeholder="Spara qui il seriale dell'attrezzo..." autofocus required>
-                    <button class="btn btn-warning fw-bold">ASSEGNA</button>
+                <h5 class="fw-bold text-dark mb-3"><i class="fas fa-barcode me-2 text-warning"></i>CARICO RAPIDO ATTREZZATURA</h5>
+                <form action="/assign/{{ tech.id }}" method="POST" class="row g-2">
+                    <div class="col-9">
+                        <input type="text" name="barcode_serial" class="form-control form-control-lg border-warning" placeholder="Spara il seriale dell'attrezzo..." autofocus required>
+                    </div>
+                    <div class="col-3">
+                        <button class="btn btn-warning btn-lg w-100 fw-bold">CARICA</button>
+                    </div>
                 </form>
             </div>
         </div>
-
-        <div class="card shadow-sm">
-            <div class="card-header bg-dark text-white fw-bold">DOTAZIONE ATTUALE</div>
-            <table class="table mb-0">
-                <thead><tr><th>Modello</th><th>Seriale (S/N)</th><th>Descrizione</th></tr></thead>
-                <tbody>
-                    {% for item in tech.items %}
-                    <tr><td>{{ item.code }}</td><td>{{ item.serial }}</td><td>{{ item.description }}</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-dark text-white fw-bold">DOTAZIONE SUL MEZZO</div>
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr><th>Modello</th><th>Matricola (S/N)</th><th>Descrizione</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for item in tech.items %}
+                        <tr>
+                            <td><code>{{ item.code }}</code></td>
+                            <td><span class="badge bg-info text-dark">{{ item.serial }}</span></td>
+                            <td>{{ item.description }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="3" class="text-center p-4 text-muted">Furgone vuoto.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
