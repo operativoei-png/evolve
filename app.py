@@ -10,21 +10,21 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'evolve-industrial-final-2026'
+app.config['SECRET_KEY'] = 'evolve-industrial-erp-2026'
 
-# --- CONFIGURAZIONE DATABASE POSTGRESQL ---
+# --- CONFIGURAZIONE DATABASE (POSTGRESQL PER RENDERE I DATI PERMANENTI) ---
 database_url = os.environ.get('DATABASE_URL')
 if database_url and database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///evolve_emergency.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///evolve_prod.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-# --- MODELLI ---
+# --- MODELLI DATABASE ---
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
@@ -65,9 +65,10 @@ with app.app_context():
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# --- ROTTE ---
+# --- ROTTE DI NAVIGAZIONE ---
 @app.route('/')
-def index(): return redirect(url_for('dashboard'))
+def index():
+    return redirect(url_for('dashboard'))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -76,29 +77,48 @@ def login():
         if user and check_password_hash(user.password_hash, request.form.get('password')):
             login_user(user)
             return redirect(url_for('dashboard'))
+        flash('Credenziali non valide')
     return render_template('login.html')
 
 @app.route('/dashboard')
 @login_required
 def dashboard():
     stats = {
-        'techs': Technician.query.count(), 
-        'wh_items': Item.query.filter_by(technician_id=None).count(), 
+        'techs': Technician.query.count(),
+        'wh_items': Item.query.filter_by(technician_id=None).count(),
         'assigned': Item.query.filter(Item.technician_id != None).count()
     }
     return render_template('dashboard.html', stats=stats)
 
+# --- GESTIONE TECNICI ---
 @app.route('/technicians', methods=['GET', 'POST'])
 @login_required
 def technicians():
     if request.method == 'POST':
-        badge = request.form.get('badge')
-        name = request.form.get('name')
-        if name:
-            new_t = Technician(badge_id=badge, name=name, phone=request.form.get('phone'), van_plate=request.form.get('plate'))
+        try:
+            new_t = Technician(
+                badge_id=request.form.get('badge'),
+                name=request.form.get('name'),
+                phone=request.form.get('phone'),
+                van_plate=request.form.get('plate')
+            )
             db.session.add(new_t)
             db.session.commit()
+            flash('Tecnico registrato correttamente', 'success')
+        except:
+            db.session.rollback()
+            flash('Errore: Nome o Badge già esistente', 'danger')
     return render_template('technicians.html', techs=Technician.query.all())
+
+@app.route('/search_tech', methods=['POST'])
+@login_required
+def search_tech():
+    badge = request.form.get('badge_scan')
+    tech = Technician.query.filter_by(badge_id=badge).first()
+    if tech:
+        return redirect(url_for('technician_detail', id=tech.id))
+    flash('Badge non trovato!')
+    return redirect(url_for('technicians'))
 
 @app.route('/technician/<int:id>')
 @login_required
@@ -107,6 +127,7 @@ def technician_detail(id):
     available = Item.query.filter_by(technician_id=None).all()
     return render_template('technician_detail.html', tech=tech, available=available)
 
+# --- GESTIONE MAGAZZINO E ASSEGNAZIONE ---
 @app.route('/warehouse', methods=['GET', 'POST'])
 @login_required
 def warehouse():
@@ -116,23 +137,21 @@ def warehouse():
         desc = request.form.get('description')
         qty = int(request.form.get('quantity', 1))
         if serial:
-            # Controllo se seriale esiste
-            exist = Item.query.filter_by(serial=serial).first()
-            if not exist:
-                db.session.add(Item(code=code, serial=serial, description=desc, quantity=1))
+            db.session.add(Item(code=code, serial=serial, description=desc, quantity=1))
         else:
             item = Item.query.filter_by(code=code, serial=None, technician_id=None).first()
             if item: item.quantity += qty
             else: db.session.add(Item(code=code, description=desc, quantity=qty))
         db.session.commit()
-    return render_template('warehouse.html', items=Item.query.filter_by(technician_id=None).all())
+    items = Item.query.filter_by(technician_id=None).all()
+    return render_template('warehouse.html', items=items)
 
-# ROTTA ASSEGNAZIONE (CORRETTA)
 @app.route('/assign/<int:tech_id>', methods=['POST'])
 @login_required
 def assign_item(tech_id):
     tech = Technician.query.get_or_404(tech_id)
-    barcode_serial = request.form.get('barcode_serial')
+    # Raccogliamo il seriale sparato dalla pistola
+    barcode_serial = request.form.get('barcode_serial').strip() if request.form.get('barcode_serial') else None
     
     # Cerchiamo l'articolo nel magazzino centrale tramite Seriale
     item = Item.query.filter_by(serial=barcode_serial, technician_id=None).first()
@@ -141,16 +160,16 @@ def assign_item(tech_id):
         try:
             bolla_no = f"BOL-{datetime.now().strftime('%y%m%d')}-{uuid.uuid4().hex[:4].upper()}"
             item.technician_id = tech.id
-            log_desc = f"Consegnato: {item.description} (S/N: {item.serial})"
+            log_desc = f"CONSEGNATO: {item.description} (S/N: {item.serial})"
             log = TransferLog(bolla_no=bolla_no, tech_name=tech.name, data_json=log_desc)
             db.session.add(log)
             db.session.commit()
             return redirect(url_for('visualizza_bolla', id=log.id))
         except Exception as e:
             db.session.rollback()
-            flash(f"Errore tecnico: {str(e)}")
+            flash(f"Errore database: {str(e)}")
     else:
-        flash('ERRORE: Articolo con questo seriale non trovato a magazzino!')
+        flash('ERRORE: Articolo con questo seriale non trovato a magazzino o già assegnato!')
     
     return redirect(url_for('technician_detail', id=tech.id))
 
@@ -160,17 +179,11 @@ def visualizza_bolla(id):
     log = TransferLog.query.get_or_404(id)
     return render_template('bolla.html', log=log)
 
-@app.route('/search_tech', methods=['POST'])
-@login_required
-def search_tech():
-    badge = request.form.get('badge_scan')
-    tech = Technician.query.filter_by(badge_id=badge).first()
-    if tech: return redirect(url_for('technician_detail', id=tech.id))
-    flash('Badge non trovato!')
-    return redirect(url_for('technicians'))
-
 @app.route('/logout')
-def logout(): logout_user(); return redirect(url_for('login'))
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
