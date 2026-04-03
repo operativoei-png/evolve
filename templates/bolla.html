@@ -68,4 +68,27 @@
     }
 </style>
 {% endblock %}
- 
+{% extends 'base.html' %}
+{% block content %}
+<div class="card p-5 border-dark shadow mx-auto" style="max-width: 800px; background: white;">
+    <div class="d-flex justify-content-between border-bottom pb-3 mb-4">
+        <h2>EVOLVE IMPIANTI</h2>
+        <div class="text-end">
+            <h4>BOLLA N° {{ log.bolla_no }}</h4>
+            <p>{{ log.timestamp.strftime('%d/%m/%Y %H:%M') }}</p>
+        </div>
+    </div>
+    <h5>Destinatario: <strong>{{ log.tech_name }}</strong></h5>
+    <div class="p-4 bg-light border rounded my-4" style="min-height: 150px;">
+        {{ log.data_json }}
+    </div>
+    <div class="row mt-5 text-center">
+        <div class="col-6"><hr><p>Firma Magazziniere</p></div>
+        <div class="col-6"><hr><p>Firma Tecnico</p></div>
+    </div>
+</div>
+<div class="text-center mt-4 no-print">
+    <button onclick="window.print()" class="btn btn-primary btn-lg">STAMPA</button>
+    <a href="/dashboard" class="btn btn-secondary btn-lg">CHIUDI</a>
+</div>
+{% endblock %} 
