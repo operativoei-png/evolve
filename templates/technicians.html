@@ -1,19 +1,52 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="card p-4 mb-4 shadow-sm">
-    <h4>Aggiungi Nuovo Tecnico</h4>
+<div class="card shadow-sm p-4 mb-4 border-0">
+    <h4 class="mb-3 text-primary"><i class="fas fa-user-plus me-2"></i>Nuovo Tecnico / Dipendente</h4>
     <form method="POST" class="row g-3">
-        <div class="col-md-5"><input type="text" name="name" class="form-control" placeholder="Nome Completo" required></div>
-        <div class="col-md-5"><input type="text" name="phone" class="form-control" placeholder="Telefono"></div>
-        <div class="col-md-2"><button class="btn btn-success w-100">Salva</button></div>
+        <div class="col-md-4">
+            <label class="form-label fw-bold">Nome e Cognome</label>
+            <input type="text" name="name" class="form-control" placeholder="es. Mario Rossi" required>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label fw-bold">Telefono</label>
+            <input type="text" name="phone" class="form-control" placeholder="es. 3331234567">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label fw-bold">Targa Furgone</label>
+            <input type="text" name="plate" class="form-control" placeholder="es. AB123CD">
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button class="btn btn-primary w-100 shadow-sm">Salva Anagrafica</button>
+        </div>
     </form>
 </div>
-<table class="table bg-white shadow-sm">
-    <thead><tr><th>Nome</th><th>Telefono</th><th>Azioni</th></tr></thead>
-    <tbody>
-        {% for t in techs %}
-        <tr><td>{{ t.name }}</td><td>{{ t.phone }}</td><td><button class="btn btn-sm btn-info">Scheda</button></td></tr>
-        {% endfor %}
-    </tbody>
-</table>
+
+<div class="card shadow-sm border-0 overflow-hidden">
+    <table class="table table-hover mb-0 align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th>Nome Tecnico</th>
+                <th>Contatto</th>
+                <th>Mezzo Assegnato</th>
+                <th class="text-end">Azioni</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for tech in techs %}
+            <tr>
+                <td class="fw-bold text-uppercase">{{ tech.name }}</td>
+                <td>{{ tech.phone if tech.phone else '-' }}</td>
+                <td><span class="badge bg-light text-dark border">{{ tech.van_plate if tech.van_plate else 'N/A' }}</span></td>
+                <td class="text-end">
+                    <a href="/technician/{{ tech.id }}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-eye me-1"></i> Gestisci Dotazione
+                    </a>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" class="text-center p-4 text-muted">Nessun tecnico registrato.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% endblock %}
