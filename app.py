@@ -10,14 +10,14 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'evolve-industrial-2026'
+app.config['SECRET_KEY'] = 'evolve-industrial-final-2026'
 
-# --- DATABASE POSTGRESQL (RENDE I DATI PERMANENTI) ---
+# --- CONFIGURAZIONE DATABASE POSTGRESQL ---
 database_url = os.environ.get('DATABASE_URL')
 if database_url and database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///evolve_final_backup.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///evolve_emergency.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -81,15 +81,23 @@ def login():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    stats = {'techs': Technician.query.count(), 'wh_items': Item.query.filter_by(technician_id=None).count(), 'assigned': Item.query.filter(Item.technician_id != None).count()}
+    stats = {
+        'techs': Technician.query.count(), 
+        'wh_items': Item.query.filter_by(technician_id=None).count(), 
+        'assigned': Item.query.filter(Item.technician_id != None).count()
+    }
     return render_template('dashboard.html', stats=stats)
 
 @app.route('/technicians', methods=['GET', 'POST'])
 @login_required
 def technicians():
     if request.method == 'POST':
-        db.session.add(Technician(badge_id=request.form.get('badge'), name=request.form.get('name'), phone=request.form.get('phone'), van_plate=request.form.get('plate')))
-        db.session.commit()
+        badge = request.form.get('badge')
+        name = request.form.get('name')
+        if name:
+            new_t = Technician(badge_id=badge, name=name, phone=request.form.get('phone'), van_plate=request.form.get('plate'))
+            db.session.add(new_t)
+            db.session.commit()
     return render_template('technicians.html', techs=Technician.query.all())
 
 @app.route('/technician/<int:id>')
@@ -103,9 +111,15 @@ def technician_detail(id):
 @login_required
 def warehouse():
     if request.method == 'POST':
-        code, serial, desc = request.form.get('code'), request.form.get('serial'), request.form.get('description')
+        code = request.form.get('code')
+        serial = request.form.get('serial')
+        desc = request.form.get('description')
         qty = int(request.form.get('quantity', 1))
-        if serial: db.session.add(Item(code=code, serial=serial, description=desc, quantity=1))
+        if serial:
+            # Controllo se seriale esiste
+            exist = Item.query.filter_by(serial=serial).first()
+            if not exist:
+                db.session.add(Item(code=code, serial=serial, description=desc, quantity=1))
         else:
             item = Item.query.filter_by(code=code, serial=None, technician_id=None).first()
             if item: item.quantity += qty
@@ -113,31 +127,31 @@ def warehouse():
         db.session.commit()
     return render_template('warehouse.html', items=Item.query.filter_by(technician_id=None).all())
 
-# ASSEGNAZIONE SERIALE/MATERIALE
+# ROTTA ASSEGNAZIONE (CORRETTA)
 @app.route('/assign/<int:tech_id>', methods=['POST'])
 @login_required
 def assign_item(tech_id):
     tech = Technician.query.get_or_404(tech_id)
-    # Supporto sia per ID che per scansione Seriale diretta
-    item_id = request.form.get('item_id')
     barcode_serial = request.form.get('barcode_serial')
     
-    item = None
-    if barcode_serial:
-        item = Item.query.filter_by(serial=barcode_serial, technician_id=None).first()
-    elif item_id:
-        item = Item.query.get(item_id)
+    # Cerchiamo l'articolo nel magazzino centrale tramite Seriale
+    item = Item.query.filter_by(serial=barcode_serial, technician_id=None).first()
 
     if item:
-        bolla_no = f"BOL-{datetime.now().strftime('%y%m%d')}-{uuid.uuid4().hex[:4].upper()}"
-        item.technician_id = tech.id
-        log_desc = f"Consegnato: {item.description} (S/N: {item.serial if item.serial else 'N/A'})"
-        log = TransferLog(bolla_no=bolla_no, tech_name=tech.name, data_json=log_desc)
-        db.session.add(log)
-        db.session.commit()
-        return redirect(url_for('visualizza_bolla', id=log.id))
+        try:
+            bolla_no = f"BOL-{datetime.now().strftime('%y%m%d')}-{uuid.uuid4().hex[:4].upper()}"
+            item.technician_id = tech.id
+            log_desc = f"Consegnato: {item.description} (S/N: {item.serial})"
+            log = TransferLog(bolla_no=bolla_no, tech_name=tech.name, data_json=log_desc)
+            db.session.add(log)
+            db.session.commit()
+            return redirect(url_for('visualizza_bolla', id=log.id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Errore tecnico: {str(e)}")
+    else:
+        flash('ERRORE: Articolo con questo seriale non trovato a magazzino!')
     
-    flash('Articolo non trovato o non disponibile!')
     return redirect(url_for('technician_detail', id=tech.id))
 
 @app.route('/bolla/<int:id>')
@@ -145,6 +159,15 @@ def assign_item(tech_id):
 def visualizza_bolla(id):
     log = TransferLog.query.get_or_404(id)
     return render_template('bolla.html', log=log)
+
+@app.route('/search_tech', methods=['POST'])
+@login_required
+def search_tech():
+    badge = request.form.get('badge_scan')
+    tech = Technician.query.filter_by(badge_id=badge).first()
+    if tech: return redirect(url_for('technician_detail', id=tech.id))
+    flash('Badge non trovato!')
+    return redirect(url_for('technicians'))
 
 @app.route('/logout')
 def logout(): logout_user(); return redirect(url_for('login'))
