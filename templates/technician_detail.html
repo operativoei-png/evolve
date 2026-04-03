@@ -2,69 +2,35 @@
 {% block content %}
 <div class="row">
     <div class="col-md-4">
-        <div class="card shadow mb-4">
-            <div class="card-body text-center">
-                <div class="display-1 text-primary"><i class="fas fa-user-circle"></i></div>
-                <h3 class="mt-2">{{ tech.name }}</h3>
-                <p class="text-muted">Targa Furgone: <strong>{{ tech.van_plate }}</strong></p>
-                <hr>
-                <p><i class="fas fa-phone me-2"></i>{{ tech.phone }}</p>
-            </div>
-        </div>
-
-        <div class="card shadow mb-4">
-            <div class="card-body">
-                <h6><i class="fas fa-file-pdf me-2 text-danger"></i>Nuovo Attestato/Corso</h6>
-                <form method="POST" enctype="multipart/form-data">
-                    <input type="text" name="desc" class="form-control mb-2" placeholder="Titolo Corso (es. Sicurezza)">
-                    <input type="file" name="cert_file" class="form-control mb-2" accept=".pdf,.jpg,.png" required>
-                    <button class="btn btn-sm btn-danger w-100">Carica Documento</button>
-                </form>
-            </div>
+        <div class="card shadow-sm p-4 text-center">
+            <h3>{{ tech.name }}</h3>
+            <p class="badge bg-primary fs-6">{{ tech.van_plate }}</p>
+            <hr>
+            <a href="/technicians" class="btn btn-sm btn-secondary">Torna alla lista</a>
         </div>
     </div>
 
     <div class="col-md-8">
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-warning text-dark fw-bold">Assegna Materiale / Attrezzatura</div>
+        <div class="card shadow-sm mb-4 border-warning">
             <div class="card-body">
-                <form action="/assign/{{ tech.id }}" method="POST" class="row g-2">
-                    <div class="col-md-7">
-                        <select name="item_id" class="form-select" required>
-                            <option value="">Seleziona dal Magazzino Generale...</option>
-                            {% for i in available %}
-                                <option value="{{ i.id }}">{{ i.description }} - SN: {{ i.serial if i.serial else 'N/A' }} (Disp: {{ i.quantity }})</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <input type="number" name="qty" class="form-control" value="1" min="1">
-                    </div>
-                    <div class="col-md-2">
-                        <button class="btn btn-dark w-100">Assegna</button>
-                    </div>
+                <h5 class="fw-bold"><i class="fas fa-barcode"></i> ASSEGNA CON PISTOLA BARCODE</h5>
+                <form action="/assign/{{ tech.id }}" method="POST" class="d-flex gap-2">
+                    <input type="text" name="barcode_serial" class="form-control" placeholder="Spara qui il seriale dell'attrezzo..." autofocus required>
+                    <button class="btn btn-warning fw-bold">ASSEGNA</button>
                 </form>
             </div>
         </div>
 
         <div class="card shadow-sm">
-            <div class="card-header bg-primary text-white">Magazzino Viaggiante (In dotazione)</div>
-            <div class="card-body p-0">
-                <table class="table table-striped mb-0">
-                    <thead>
-                        <tr><th>Modello</th><th>Matricola</th><th>Q.tà</th></tr>
-                    </thead>
-                    <tbody>
-                        {% for item in tech.items %}
-                        <tr>
-                            <td>{{ item.code }}</td>
-                            <td><span class="text-primary">{{ item.serial if item.serial else '-' }}</span></td>
-                            <td>{{ item.quantity }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+            <div class="card-header bg-dark text-white fw-bold">DOTAZIONE ATTUALE</div>
+            <table class="table mb-0">
+                <thead><tr><th>Modello</th><th>Seriale (S/N)</th><th>Descrizione</th></tr></thead>
+                <tbody>
+                    {% for item in tech.items %}
+                    <tr><td>{{ item.code }}</td><td>{{ item.serial }}</td><td>{{ item.description }}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
