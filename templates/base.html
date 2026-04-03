@@ -2,29 +2,24 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Evolve ERP - Barcode System</title>
+    <title>Evolve PRO ERP</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        .navbar-search { background: #343a40; border: 1px solid #495057; color: white; transition: 0.3s; }
-        .navbar-search:focus { background: #495057; border-color: #0d6efd; color: white; box-shadow: none; }
-        @media print { .no-print { display: none !important; } }
+        body { background-color: #f8f9fa; }
+        .navbar-dark { background-color: #1a1a1a !important; }
+        .no-print { display: block; }
+        @media print { .no-print { display: none !important; } .container { width: 100% !important; max-width: 100% !important; } }
     </style>
 </head>
-<body class="bg-light">
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 no-print shadow">
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark no-print mb-4 shadow">
         <div class="container">
-            <a class="navbar-brand fw-bold" href="/">EVOLVE PRO</a>
-            
+            <a class="navbar-brand fw-bold" href="/">EVOLVE <span class="text-primary">PRO</span></a>
             {% if current_user.is_authenticated %}
             <form action="/search_tech" method="POST" class="d-flex ms-auto me-3">
-                <div class="input-group input-group-sm">
-                    <span class="input-group-text bg-primary border-0 text-white"><i class="fas fa-barcode"></i></span>
-                    <input type="text" name="badge_scan" id="barcode-nav" class="form-control navbar-search" 
-                           placeholder="Spara Badge Tecnico..." autofocus>
-                </div>
+                <input type="text" name="badge_scan" id="barcode-main" class="form-control form-control-sm border-primary" placeholder="Spara Badge Tecnico..." autofocus>
             </form>
-
             <div class="navbar-nav">
                 <a class="nav-link" href="/dashboard">Dashboard</a>
                 <a class="nav-link" href="/warehouse">Magazzino</a>
@@ -34,24 +29,20 @@
             {% endif %}
         </div>
     </nav>
-
     <div class="container">
         {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} shadow-sm">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }} shadow-sm">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
         {% endwith %}
-        
         {% block content %}{% endblock %}
     </div>
-
     <script>
-        // Mantiene il focus sul campo barcode ogni volta che la pagina è pronta
-        document.addEventListener("DOMContentLoaded", function() {
-            const navInput = document.getElementById('barcode-nav');
-            if (navInput) navInput.focus();
+        // Mantiene il cursore sempre pronto per la pistola barcode
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'F2') document.getElementById('barcode-main').focus();
         });
     </script>
 </body>
