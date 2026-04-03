@@ -1,43 +1,59 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="card p-4 mb-4 border-0 shadow-sm">
-    <h4 class="mb-3 text-primary">Aggiungi Nuovo Tecnico</h4>
+    <h4 class="mb-3 text-primary fw-bold"><i class="fas fa-id-card me-2"></i>Registrazione Tecnici (Badge System)</h4>
+    <p class="text-muted small">Associa un badge fisico a un dipendente usando la pistola barcode nel primo campo.</p>
+    
     <form method="POST" class="row g-3">
-        <div class="col-md-4">
-            <input type="text" name="name" class="form-control" placeholder="Nome Completo" required>
+        <div class="col-md-3">
+            <label class="form-label fw-bold">Codice Badge (Spara qui)</label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-barcode"></i></span>
+                <input type="text" name="badge" class="form-control border-primary" placeholder="Codice univoco" required>
+            </div>
         </div>
         <div class="col-md-3">
-            <input type="text" name="phone" class="form-control" placeholder="Telefono">
-        </div>
-        <div class="col-md-3">
-            <input type="text" name="plate" class="form-control" placeholder="Targa Furgone">
+            <label class="form-label fw-bold">Nome e Cognome</label>
+            <input type="text" name="name" class="form-control" placeholder="es. Mario Rossi" required>
         </div>
         <div class="col-md-2">
-            <button class="btn btn-primary w-100">Salva</button>
+            <label class="form-label fw-bold">Telefono</label>
+            <input type="text" name="phone" class="form-control" placeholder="333...">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label fw-bold">Targa Furgone</label>
+            <input type="text" name="plate" class="form-control" placeholder="es. AB123CD">
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button class="btn btn-primary w-100 fw-bold shadow-sm">SALVA TECNICO</button>
         </div>
     </form>
 </div>
 
-<div class="card border-0 shadow-sm overflow-hidden">
-    <table class="table table-hover mb-0">
+<div class="card border-0 shadow-sm">
+    <table class="table table-hover mb-0 align-middle">
         <thead class="table-dark">
             <tr>
-                <th>Nome</th>
-                <th>Contatto</th>
-                <th>Furgone</th>
+                <th style="width: 150px;">ID Badge</th>
+                <th>Nome Tecnico</th>
+                <th>Mezzo</th>
                 <th class="text-end">Azioni</th>
             </tr>
         </thead>
         <tbody>
             {% for t in techs %}
             <tr>
+                <td><code class="bg-light p-1 border rounded text-primary">{{ t.badge_id }}</code></td>
                 <td class="fw-bold">{{ t.name }}</td>
-                <td>{{ t.phone if t.phone else '-' }}</td>
-                <td><span class="badge bg-secondary">{{ t.van_plate if t.van_plate else 'N/A' }}</span></td>
+                <td><span class="badge bg-light text-dark border">{{ t.van_plate if t.van_plate else 'Nessuno' }}</span></td>
                 <td class="text-end">
-                    <a href="/technician/{{ t.id }}" class="btn btn-sm btn-outline-primary">Gestisci Dotazione</a>
+                    <a href="/technician/{{ t.id }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-truck-loading me-1"></i> Carico Materiale
+                    </a>
                 </td>
             </tr>
+            {% else %}
+            <tr><td colspan="4" class="text-center p-4 text-muted">Nessun tecnico registrato. Spara un badge per iniziare!</td></tr>
             {% endfor %}
         </tbody>
     </table>
