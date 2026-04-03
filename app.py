@@ -10,23 +10,21 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'evolve-super-secure-2026'
+app.config['SECRET_KEY'] = 'evolve-industrial-2026'
 
-# --- LOGICA DI SALVATAGGIO DATI (POSTGRESQL) ---
-# Se siamo su Render, usa il database esterno, altrimenti usa SQLite locale per i test
+# --- DATABASE POSTGRESQL (RENDE I DATI PERMANENTI) ---
 database_url = os.environ.get('DATABASE_URL')
 if database_url and database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///evolve_local_backup.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///evolve_final_backup.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-# --- MODELLI DATABASE ---
-
+# --- MODELLI ---
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
@@ -56,7 +54,6 @@ class TransferLog(db.Model):
     data_json = db.Column(db.Text)
 
 # --- INIZIALIZZAZIONE ---
-
 with app.app_context():
     db.create_all()
     if not User.query.filter_by(username='admin').first():
@@ -68,17 +65,9 @@ with app.app_context():
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# --- ROTTE (CON BARCODE) ---
-
+# --- ROTTE ---
 @app.route('/')
-@login_required
-def dashboard():
-    stats = {
-        'techs': Technician.query.count(),
-        'wh_items': Item.query.filter_by(technician_id=None).count(),
-        'assigned': Item.query.filter(Item.technician_id != None).count()
-    }
-    return render_template('dashboard.html', stats=stats)
+def index(): return redirect(url_for('dashboard'))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -87,38 +76,21 @@ def login():
         if user and check_password_hash(user.password_hash, request.form.get('password')):
             login_user(user)
             return redirect(url_for('dashboard'))
-        flash('Credenziali non valide', 'danger')
     return render_template('login.html')
 
-@app.route('/search_tech', methods=['POST'])
+@app.route('/dashboard')
 @login_required
-def search_tech():
-    badge = request.form.get('badge_scan')
-    tech = Technician.query.filter_by(badge_id=badge).first()
-    if tech:
-        return redirect(url_for('technician_detail', id=tech.id))
-    flash('Badge non riconosciuto!', 'warning')
-    return redirect(url_for('technicians'))
+def dashboard():
+    stats = {'techs': Technician.query.count(), 'wh_items': Item.query.filter_by(technician_id=None).count(), 'assigned': Item.query.filter(Item.technician_id != None).count()}
+    return render_template('dashboard.html', stats=stats)
 
 @app.route('/technicians', methods=['GET', 'POST'])
 @login_required
 def technicians():
     if request.method == 'POST':
-        badge = request.form.get('badge')
-        name = request.form.get('name')
-        phone = request.form.get('phone')
-        plate = request.form.get('plate')
-        if name:
-            try:
-                db.session.add(Technician(badge_id=badge, name=name, phone=phone, van_plate=plate))
-                db.session.commit()
-                flash('Tecnico registrato!', 'success')
-            except:
-                db.session.rollback()
-                flash('Errore: Badge o Nome già esistente!', 'danger')
-            return redirect(url_for('technicians'))
-    techs = Technician.query.all()
-    return render_template('technicians.html', techs=techs)
+        db.session.add(Technician(badge_id=request.form.get('badge'), name=request.form.get('name'), phone=request.form.get('phone'), van_plate=request.form.get('plate')))
+        db.session.commit()
+    return render_template('technicians.html', techs=Technician.query.all())
 
 @app.route('/technician/<int:id>')
 @login_required
@@ -131,55 +103,51 @@ def technician_detail(id):
 @login_required
 def warehouse():
     if request.method == 'POST':
-        code = request.form.get('code')
-        serial = request.form.get('serial')
-        desc = request.form.get('description')
+        code, serial, desc = request.form.get('code'), request.form.get('serial'), request.form.get('description')
         qty = int(request.form.get('quantity', 1))
-        if serial:
-            db.session.add(Item(code=code, serial=serial, description=desc, quantity=1))
+        if serial: db.session.add(Item(code=code, serial=serial, description=desc, quantity=1))
         else:
             item = Item.query.filter_by(code=code, serial=None, technician_id=None).first()
             if item: item.quantity += qty
             else: db.session.add(Item(code=code, description=desc, quantity=qty))
         db.session.commit()
-        flash('Articolo caricato in magazzino', 'success')
-    items = Item.query.filter_by(technician_id=None).all()
-    return render_template('warehouse.html', items=items)
+    return render_template('warehouse.html', items=Item.query.filter_by(technician_id=None).all())
 
+# ASSEGNAZIONE SERIALE/MATERIALE
 @app.route('/assign/<int:tech_id>', methods=['POST'])
 @login_required
 def assign_item(tech_id):
     tech = Technician.query.get_or_404(tech_id)
+    # Supporto sia per ID che per scansione Seriale diretta
     item_id = request.form.get('item_id')
-    qty_req = int(request.form.get('qty', 1))
-    item = Item.query.get(item_id)
-    if item and item.quantity >= qty_req:
+    barcode_serial = request.form.get('barcode_serial')
+    
+    item = None
+    if barcode_serial:
+        item = Item.query.filter_by(serial=barcode_serial, technician_id=None).first()
+    elif item_id:
+        item = Item.query.get(item_id)
+
+    if item:
         bolla_no = f"BOL-{datetime.now().strftime('%y%m%d')}-{uuid.uuid4().hex[:4].upper()}"
-        if item.serial:
-            item.technician_id = tech.id
-            log_desc = f"Consegnata Matricola {item.serial} - {item.description}"
-        else:
-            item.quantity -= qty_req
-            db.session.add(Item(code=item.code, description=item.description, quantity=qty_req, technician_id=tech.id))
-            log_desc = f"Consegnati {qty_req} pz di {item.description}"
+        item.technician_id = tech.id
+        log_desc = f"Consegnato: {item.description} (S/N: {item.serial if item.serial else 'N/A'})"
         log = TransferLog(bolla_no=bolla_no, tech_name=tech.name, data_json=log_desc)
         db.session.add(log)
         db.session.commit()
-        return redirect(url_for('view_bolla', id=log.id))
-    flash('Giacenza insufficiente!', 'danger')
+        return redirect(url_for('visualizza_bolla', id=log.id))
+    
+    flash('Articolo non trovato o non disponibile!')
     return redirect(url_for('technician_detail', id=tech.id))
 
 @app.route('/bolla/<int:id>')
 @login_required
-def view_bolla(id):
+def visualizza_bolla(id):
     log = TransferLog.query.get_or_404(id)
     return render_template('bolla.html', log=log)
 
 @app.route('/logout')
-def logout():
-    logout_user()
-    return redirect(url_for('login'))
+def logout(): logout_user(); return redirect(url_for('login'))
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
